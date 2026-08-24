@@ -1,0 +1,9 @@
+{
+  "edgeWorkerId": 1234,
+  "eventHandler": "onClientRequest",
+  "resourceTier": 200,
+  "request": {
+    "method": "GET",
+    "url": "/"
+  }
+}

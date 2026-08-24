@@ -1,0 +1,177 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Describes an EdgeWorkersDevServer invocation: the event handler to run plus the EdgeWorkers request and response objects it receives.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["edgeWorkerId", "eventHandler", "resourceTier"],
+  "properties": {
+    "edgeWorkerId": {
+      "type": "integer",
+      "description": "EdgeWorker ID the invocation simulates."
+    },
+    "eventHandler": {
+      "type": "string",
+      "description": "Event handler function to invoke.",
+      "enum": [
+        "onClientRequest",
+        "onOriginRequest",
+        "onOriginResponse",
+        "onClientResponse",
+        "responseProvider",
+        "onBotSegmentAvailable"
+      ]
+    },
+    "requestId": {
+      "type": "string",
+      "description": "Identifier correlating this invocation across logs."
+    },
+    "resourceTier": {
+      "type": "integer",
+      "description": "Resource tier ID to simulate execution limits for."
+    },
+    "settings": {
+      "type": "object",
+      "description": "Execution settings for the invocation.",
+      "additionalProperties": false,
+      "properties": {
+        "ignoreLimits": {
+          "type": "boolean",
+          "description": "When true, do not enforce resource tier CPU/memory limits."
+        },
+        "subworker": {
+          "type": "object",
+          "description": "Subworker (background execution) configuration.",
+          "additionalProperties": false,
+          "properties": {
+            "isSubworker": {
+              "type": "boolean",
+              "description": "Whether this invocation runs as a subworker."
+            },
+            "count": {
+              "type": "integer",
+              "description": "Number of subworker invocations to simulate.",
+              "minimum": 0
+            }
+          }
+        },
+        "profile": {
+          "type": "boolean",
+          "description": "When true, collect execution profiling data."
+        }
+      }
+    },
+    "request": {
+      "$ref": "#/$defs/request"
+    },
+    "response": {
+      "$ref": "#/$defs/response"
+    }
+  },
+  "$defs": {
+    "header": {
+      "type": "object",
+      "description": "A single HTTP header name paired with one or more values.",
+      "required": ["name", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "description": "Header value, or multiple values for a repeated header.",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "string" } }
+          ]
+        }
+      }
+    },
+    "variable": {
+      "type": "object",
+      "description": "A Property Manager PMUSER_ variable name/value pair.",
+      "required": ["name", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^PMUSER_[A-Z0-9_]+$"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "description": "Maps to the EdgeWorkers request object: https://techdocs.akamai.com/edgeworkers/docs/request-object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+        },
+        "url": {
+          "type": "string",
+          "description": "Full request URL, or the relative path and query string."
+        },
+        "clientIp": {
+          "type": "string"
+        },
+        "cpCode": {
+          "type": "integer"
+        },
+        "headers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/header" }
+        },
+        "body": {
+          "type": "string"
+        },
+        "device": {
+          "type": "object",
+          "description": "Client device characteristics; see https://techdocs.akamai.com/edgeworkers/docs/device-object",
+          "additionalProperties": true
+        },
+        "features": {
+          "type": "object",
+          "description": "Optional feature-specific context available on the request object.",
+          "additionalProperties": false,
+          "properties": {
+            "userLocation": {
+              "type": "object",
+              "description": "Geographic location; see https://techdocs.akamai.com/edgeworkers/docs/user-location-object",
+              "additionalProperties": true
+            },
+            "botScore": {
+              "type": "object",
+              "description": "Bot Manager Premier signal; see https://techdocs.akamai.com/edgeworkers/docs/botscore-object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "userVariables": {
+          "type": "array",
+          "description": "PMUSER_ variables readable via request.getVariable().",
+          "items": { "$ref": "#/$defs/variable" }
+        }
+      }
+    },
+    "response": {
+      "type": "object",
+      "description": "Maps to the EdgeWorkers response object: https://techdocs.akamai.com/edgeworkers/docs/response-object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "integer",
+          "minimum": 200,
+          "maximum": 599
+        },
+        "headers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/header" }
+        }
+      }
+    }
+  }
+}

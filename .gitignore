@@ -1,0 +1,19 @@
+# Compiled binaries
+dist/
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+
+# Go workspace
+vendor/
+
+# OS
+.DS_Store

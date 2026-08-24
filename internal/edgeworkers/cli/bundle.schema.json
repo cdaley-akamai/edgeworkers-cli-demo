@@ -1,0 +1,105 @@
+{
+  "description": "Describes an EdgeWorker manifest.",
+  "type": "object",
+  "required": [
+    "edgeworker-version"
+  ],
+  "properties": {
+    "edgeworker-version": {
+      "type": "string",
+      "description": "Version of the EdgeWorker. Accepted characters: underscores, dashes, periods, tildes, numbers, uppercase and lowercase letters.",
+      "pattern": "^(?!.*?\\.{2})(?!^\\.$)[.a-zA-Z0-9_~-]{1,32}$",
+      "minLength": 1
+    },
+    "bundle-version": {
+      "type": "integer",
+      "description": "Bundle format version.",
+      "minimum": 1
+    },
+    "api-version": {
+      "type": "string",
+      "description": "Version of Javascript API that the EW is coded against.",
+      "pattern": "^[0-9.]*$",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "A message describing the EW."
+    },
+    "config": {
+      "type": "object",
+      "description": "Configuration for EdgeWorker.",
+      "properties": {
+        "subrequest": {
+          "type": "object",
+          "description": "Configuration for Subworkers Enablement.",
+          "required": [
+            "invoke-for-edgeworker-clients"
+          ]
+        },
+        "logging": {
+          "type": "object",
+          "description": "Default logging level in this EdgeWorker.",
+          "properties": {
+            "level": {
+              "type": "string",
+              "description": "Logging level to apply.",
+              "enum": [
+                "trace",
+                "debug",
+                "info",
+                "warn",
+                "error"
+              ]
+            },
+            "schema": {
+              "type": "string",
+              "description": "Schema version of log.",
+              "enum": [
+                "v1"
+              ]
+            },
+            "ds2id": {
+              "type": "integer",
+              "description": "Identifier of the DataStream 2."
+            },
+            "log-uncaught-exceptions": {
+              "type": "boolean",
+              "description": "Enables logging of uncaught exceptions. Defaults to false if not specified."
+            }
+          }
+        },
+        "client-ip-header": {
+          "type": "boolean",
+          "description": "Configuration for True-Client-IP enablement."
+        }
+      }
+    },
+    "misc": {
+      "type": "object"
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Other EdgeWorkers required in this EdgeWorker.",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "edgeWorkerId",
+          "version"
+        ],
+        "minProperties": 1,
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "Version of the EdgeWorker to import. Accepted characters: underscores, dashes, periods, tildes, numbers, uppercase and lowercase letters.",
+            "pattern": "^(active|revisionId:[1-9]\\d*-[0-9]\\d*)$",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "definitions": {},
+  "additionalProperties": false
+}

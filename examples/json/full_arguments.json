@@ -1,0 +1,43 @@
+{
+  "edgeWorkerId": 1234,
+  "eventHandler": "onClientResponse",
+  "requestId": "1234",
+  "resourceTier": 200,
+  "settings": {
+    "ignoreLimits": false,
+    "subworker": {
+      "isSubworker": false,
+      "count": 15
+    },
+    "profile": true
+  },
+  "request": {
+    "method": "GET",
+    "url": "https://www.akamai.com/test.html?asdf=1&asdf=2",
+    "headers": [
+      {
+        "name": "name",
+        "value": "value"
+      }
+    ],
+    "body": "Thisisabody",
+    "features": {
+      "userLocation": {}
+    },
+    "userVariables": [
+      {
+        "name": "PMUSER_TEST",
+        "value": "1234"
+      }
+    ]
+  },
+  "response": {
+    "headers": [
+      {
+        "name": "name",
+        "value": "value"
+      }
+    ],
+    "status": 404
+  }
+}
