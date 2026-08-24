@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>EdgeWorkersDevServer Playground</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/eclipse.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/lint/lint.min.css" />
+<style>
+  html, body { height: 100%; margin: 0; font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header { flex: 0 0 auto; display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; background: #1e293b; color: #f1f5f9; }
+  header h1 { font-size: 1rem; margin: 0; }
+  #run { margin-left: auto; padding: 0.5rem 1.25rem; border: none; border-radius: 4px; background: #2563eb; color: #fff; cursor: pointer; }
+  #run:disabled { background: #64748b; cursor: default; }
+  #request-preset, #code-example { padding: 0.3rem 0.5rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font-size: 0.75rem; }
+  #status { color: #cbd5e1; font-size: 0.85rem; }
+  main { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 1fr 2fr; position: relative; }
+  section { display: flex; flex-direction: column; border-right: 1px solid #cbd5e1; min-width: 0; }
+  section:last-child { border-right: none; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.5rem 0.75rem; background: #f1f5f9; }
+  .section-header h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0; color: #334155; }
+  .CodeMirror { flex: 1; height: auto; font-size: 13px; }
+  #output-panel { position: absolute; left: 0; right: 0; bottom: 0; height: 2.5rem; background: #fff; border-top: 2px solid #1e293b; box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column; overflow: hidden; transition: height 0.2s ease-out; z-index: 10; }
+  #output-panel.expanded { height: 45%; }
+  #output-panel .section-header { height: 2.5rem; box-sizing: border-box; padding: 0 0.75rem; background: #1e293b; flex: 0 0 auto; cursor: pointer; }
+  #output-panel .section-header h2 { color: #f1f5f9; }
+  #output-panel .window-controls { display: flex; gap: 0.35rem; }
+  #output-panel .window-btn { width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 3px; color: #cbd5e1; font-size: 0.85rem; line-height: 1; cursor: pointer; }
+  #output-panel .window-btn:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
+  #output-panel .window-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>EdgeWorkersDevServer Playground</h1>
+  <span id="status">idle</span>
+  <button id="run">Run</button>
+</header>
+<main>
+  <section>
+    <div class="section-header">
+      <h2>Request</h2>
+      <select id="request-preset"></select>
+    </div>
+    <textarea id="request-editor"></textarea>
+  </section>
+  <section>
+    <div class="section-header">
+      <h2>Code</h2>
+      <select id="code-example">
+        <option value="">Examples…</option>
+      </select>
+    </div>
+    <textarea id="code-editor">// Mock EdgeWorker handler code.
+export function onClientRequest(request) {
+  // edit me
+}
+</textarea>
+  </section>
+  <div id="output-panel">
+    <div class="section-header" id="output-header">
+      <h2>Output</h2>
+      <div class="window-controls">
+        <button id="output-minimize" type="button" class="window-btn active" aria-label="Minimize output" title="Minimize">&#x2013;</button>
+        <button id="output-maximize" type="button" class="window-btn" aria-label="Maximize output" title="Maximize">&#x25A1;</button>
+      </div>
+    </div>
+    <textarea id="response-editor" readonly></textarea>
+  </div>
+</main>
+<!-- Inert data island: the embedded invocation schema, inlined here by the server. -->
+<script id="invocation-schema" type="application/json">__INVOCATION_SCHEMA__</script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/lint/lint.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ajv@6.12.6/dist/ajv.min.js"></script>
+<script>
+  // Preset invocation bodies, from a bare minimum to every documented field filled in.
+  // Fields mirror the EdgeWorkers request/response objects:
+  // https://techdocs.akamai.com/edgeworkers/docs/request-object
+  // https://techdocs.akamai.com/edgeworkers/docs/response-object
+  const requestPresets = [
+    {
+      name: 'Minimal GET',
+      value: {
+        edgeWorkerId: 1234,
+        eventHandler: 'onClientRequest',
+        resourceTier: 200,
+        request: { method: 'GET', url: '/' },
+      },
+    },
+    {
+      name: 'POST with headers and body',
+      value: {
+        edgeWorkerId: 1234,
+        eventHandler: 'onClientRequest',
+        resourceTier: 200,
+        request: {
+          method: 'POST',
+          url: '/submit?ref=playground',
+          headers: [
+            { name: 'Content-Type', value: 'application/json' },
+            { name: 'Accept', value: ['application/json', 'text/plain'] },
+          ],
+          body: '{"example":true}',
+        },
+      },
+    },
+    {
+      name: 'onClientResponse with prior response',
+      value: {
+        edgeWorkerId: 1234,
+        eventHandler: 'onClientResponse',
+        resourceTier: 200,
+        request: {
+          method: 'GET',
+          url: '/test.html',
+          headers: [{ name: 'User-Agent', value: 'Mozilla/5.0' }],
+        },
+        response: {
+          status: 404,
+          headers: [{ name: 'Content-Type', value: 'text/html' }],
+        },
+      },
+    },
+    {
+      name: 'Full example (all fields)',
+      value: {
+        edgeWorkerId: 1234,
+        eventHandler: 'onClientResponse',
+        requestId: '1234',
+        resourceTier: 200,
+        settings: {
+          ignoreLimits: false,
+          subworker: { isSubworker: false, count: 15 },
+          profile: true,
+        },
+        request: {
+          method: 'GET',
+          url: 'https://www.akamai.com/test.html?asdf=1&asdf=2',
+          headers: [{ name: 'name', value: 'value' }],
+          body: 'Thisisabody',
+          features: { userLocation: {} },
+          userVariables: [{ name: 'PMUSER_TEST', value: '1234' }],
+        },
+        response: {
+          headers: [{ name: 'name', value: 'value' }],
+          status: 404,
+        },
+      },
+    },
+  ];
+
+  // Sample EdgeWorker code, adapted from https://www.edgecompute.live/examples/.
+  // To add a new sample, append { name, code } here — it will show up in the
+  // "Examples…" dropdown in the Code section automatically.
+  const codeExamples = [
+    {
+      name: 'Hello World',
+      code: `/*
+Purpose: EdgeWorker that generates a simple html page at the Edge and adds a response header.
+Source: https://www.edgecompute.live/examples/hello-world/
+*/
+
+import { logger } from 'log';
+
+export function onClientRequest (request) {
+  // Outputs a message to the X-Akamai-EdgeWorker-onClientRequest-Log header.
+  logger.log('Responding with hello world from the path: %s', request.path);
+  request.respondWith(
+    200, {},
+    '<html><body><h1>Hello World From Akamai EdgeWorkers</h1></body></html>');
+}
+
+export function onClientResponse (request, response) {
+  // Outputs a message to the X-Akamai-EdgeWorker-onClientResponse-Log header.
+  logger.log('Adding a header in ClientResponse');
+
+  response.setHeader('X-Hello-World', 'From Akamai EdgeWorkers');
+}
+`,
+    },
+    {
+      name: 'A/B Testing',
+      code: `/*
+Purpose: Randomly assign new users to an A/B testing group, storing the assignment
+in a cookie and query parameter, with an override via query string for easy testing.
+Source: https://www.edgecompute.live/examples/ab-testing/
+*/
+
+import { Cookies, SetCookie } from 'cookies';
+import URLSearchParams from 'url-search-params';
+
+// ====== Begin Configuration ====== //
+/** Probability that a user is added to the "A" group.  0.5 = 50% */
+const probabilityOfA = 0.5;
+/** Name of cookie that stores A/B group assignment. */
+const cookieName = 'testGroup';
+/** Name of query parameter that contains A/B group assignment. */
+const queryParamName = 'testGroup';
+/** Cookie and query string value to use for users in the "A" group. */
+const groupAValue = 'A';
+/** Cookie and query string value to use for users in the "B" group. */
+const groupBValue = 'B';
+// ====== End Configuration ====== //
+
+export function onClientRequest (request) {
+  const cookies = new Cookies(request.getHeader('Cookie'));
+  const params = new URLSearchParams(request.query);
+
+  const existingGroupValue = cookies.get(cookieName);
+  let resultGroupValue = existingGroupValue;
+
+  // override result group value if forced by query parameter
+  const paramValue = params.get(queryParamName);
+  if (paramValue) {
+    resultGroupValue = paramValue;
+  }
+
+  // If no group value has been assigned, randomly choose one based on configured percentage
+  if (!resultGroupValue) {
+    resultGroupValue = Math.random() <= probabilityOfA ? groupAValue : groupBValue;
+  }
+
+  if (resultGroupValue != existingGroupValue) {
+    cookies.delete(cookieName);
+    cookies.add(cookieName, resultGroupValue);
+    request.setHeader('Cookie', cookies.toHeader());
+  }
+
+  if (!paramValue) {
+    params.append(queryParamName, resultGroupValue);
+    request.route({ query: params.toString() });
+  }
+}
+
+export function onClientResponse (request, response) {
+  const cookies = new Cookies(request.getHeader('Cookie'));
+  const cookieValue = cookies.get(cookieName);
+  const setCookie = new SetCookie({ name: cookieName, value: cookieValue });
+  response.setHeader('Set-Cookie', setCookie.toHeader());
+}
+`,
+    },
+    {
+      name: 'Device Routing',
+      code: `/*
+Purpose: Modify forward path based on device type to point to device specific content.
+Source: https://www.edgecompute.live/examples/device-routing/
+*/
+
+export function onClientRequest (request) {
+  if (request.device.isMobile) {
+    request.route({ path: '/mobile' + request.path });
+  } else if (request.device.isTablet) {
+    request.route({ path: '/tablet' + request.path });
+  }
+}
+`,
+    },
+    {
+      name: 'Cachekey Device Type',
+      code: `/*
+Purpose: Include device type in the cache key, allowing caching of device specific
+content without changing the URL.
+Source: https://www.edgecompute.live/examples/cachekey-device-type/
+*/
+
+export function onClientRequest (request) {
+  request.setVariable('PMUSER_DEVICETYPE', 'Desktop');
+  if (request.device.isMobile) {
+    request.setVariable('PMUSER_DEVICETYPE', 'Mobile');
+  } else if (request.device.isTablet) {
+    request.setVariable('PMUSER_DEVICETYPE', 'Tablet');
+  }
+
+  request.cacheKey.includeVariable('PMUSER_DEVICETYPE');
+}
+`,
+    },
+    {
+      name: 'Geolocation',
+      code: `/*
+Purpose: Respond with JSON formatted geographical location information.
+Source: https://www.edgecompute.live/examples/geolocation/
+*/
+
+export function onClientRequest (request) {
+  var info = {};
+
+  info.continent = request.userLocation.continent || 'N/A';
+  info.country = request.userLocation.country || 'N/A';
+  info.zip = request.userLocation.zipCode || 'N/A';
+  info.region = request.userLocation.region || 'N/A';
+  info.city = request.userLocation.city || 'N/A';
+
+  info.dma = request.userLocation.dma || 'N/A';
+  info.timezone = request.userLocation.timezone || 'N/A';
+  info.networkType = request.userLocation.networkType || 'N/A';
+  info.bandwidth = request.userLocation.bandwidth || 'N/A';
+  info.areaCodes = request.userLocation.areaCodes || 'N/A';
+  info.fips = request.userLocation.fips || 'N/A';
+
+  info.source = 'Akamai EdgeWorkers';
+
+  request.respondWith(200, {}, JSON.stringify({ geoInfo: info }));
+}
+`,
+    },
+    {
+      name: 'Traffic Allow',
+      code: `/*
+Purpose: Respond with an allow or deny message depending on the country of the end user.
+Source: https://www.edgecompute.live/examples/traffic-allow/
+*/
+
+// List of currently US embargoed countries, plus N/A indicating no country data found (rare, if any)
+const embargoedCountries = ['IR', 'KP', 'SY', 'SD', 'CU', 'VE', 'N/A'];
+
+export function onClientRequest (request) {
+  const country = request.userLocation.country || 'N/A';
+  const embargoed = embargoedCountries.includes(country);
+
+  if (!embargoed) {
+    request.respondWith(200, { 'Content-Type': ['text/html;charset=utf-8'] }, '<html><body><h1>Hello ' + country + ' from Akamai EdgeWorkers!</h1></body></html>');
+  } else {
+    request.respondWith(403, { 'Content-Type': ['text/html;charset=utf-8'] }, '<html><body><h1>Sorry, users from ' + country + ' may not view this content</h1></body></html>', 'EW-embargo');
+  }
+}
+`,
+    },
+  ];
+
+  // Parses JSON while recording the source offset range of every value, keyed by its
+  // JSON Pointer path (matching the "instancePath" Ajv reports on validation errors), so
+  // schema violations can be underlined at their exact location in the editor.
+  function parseJSONWithLocations(text) {
+    let i = 0;
+    const len = text.length;
+    const locations = new Map();
+
+    function fail(message) {
+      const err = new Error(message);
+      err.at = i;
+      throw err;
+    }
+    function skipWhitespace() {
+      while (i < len && /\s/.test(text[i])) i++;
+    }
+    function parsePointerSegment(segment) {
+      return String(segment).replace(/~/g, '~0').replace(/\//g, '~1');
+    }
+    function parseValue(path) {
+      skipWhitespace();
+      const start = i;
+      let value;
+      const ch = text[i];
+      if (ch === '{') value = parseObject(path);
+      else if (ch === '[') value = parseArray(path);
+      else if (ch === '"') value = parseString();
+      else if (ch === '-' || (ch >= '0' && ch <= '9')) value = parseNumber();
+      else if (text.startsWith('true', i)) { value = true; i += 4; }
+      else if (text.startsWith('false', i)) { value = false; i += 5; }
+      else if (text.startsWith('null', i)) { value = null; i += 4; }
+      else fail(`Unexpected token ${JSON.stringify(ch)}`);
+      locations.set(path, { start, end: i });
+      return value;
+    }
+    function parseObject(path) {
+      const obj = {};
+      i++;
+      skipWhitespace();
+      if (text[i] === '}') { i++; return obj; }
+      for (;;) {
+        skipWhitespace();
+        if (text[i] !== '"') fail('Expected property name');
+        const key = parseString();
+        skipWhitespace();
+        if (text[i] !== ':') fail("Expected ':'");
+        i++;
+        obj[key] = parseValue(path + '/' + parsePointerSegment(key));
+        skipWhitespace();
+        if (text[i] === ',') { i++; continue; }
+        if (text[i] === '}') { i++; break; }
+        fail("Expected ',' or '}'");
+      }
+      return obj;
+    }
+    function parseArray(path) {
+      const arr = [];
+      i++;
+      skipWhitespace();
+      if (text[i] === ']') { i++; return arr; }
+      let index = 0;
+      for (;;) {
+        arr.push(parseValue(path + '/' + index));
+        index++;
+        skipWhitespace();
+        if (text[i] === ',') { i++; continue; }
+        if (text[i] === ']') { i++; break; }
+        fail("Expected ',' or ']'");
+      }
+      return arr;
+    }
+    function parseString() {
+      i++;
+      let s = '';
+      while (i < len && text[i] !== '"') {
+        if (text[i] === '\\') {
+          i++;
+          const esc = text[i];
+          if (esc === 'u') {
+            s += String.fromCharCode(parseInt(text.substr(i + 1, 4), 16));
+            i += 4;
+          } else {
+            s += { '"': '"', '\\': '\\', '/': '/', b: '\b', f: '\f', n: '\n', r: '\r', t: '\t' }[esc] ?? esc;
+          }
+          i++;
+        } else {
+          s += text[i];
+          i++;
+        }
+      }
+      if (text[i] !== '"') fail('Unterminated string');
+      i++;
+      return s;
+    }
+    function parseNumber() {
+      const start = i;
+      if (text[i] === '-') i++;
+      while (i < len && text[i] >= '0' && text[i] <= '9') i++;
+      if (text[i] === '.') { i++; while (i < len && text[i] >= '0' && text[i] <= '9') i++; }
+      if (text[i] === 'e' || text[i] === 'E') {
+        i++;
+        if (text[i] === '+' || text[i] === '-') i++;
+        while (i < len && text[i] >= '0' && text[i] <= '9') i++;
+      }
+      return Number(text.slice(start, i));
+    }
+
+    const value = parseValue('');
+    skipWhitespace();
+    if (i < len) fail('Unexpected trailing content');
+    return { value, locations };
+  }
+
+  function offsetToPos(text, offset) {
+    let line = 0;
+    let col = 0;
+    for (let idx = 0; idx < offset; idx++) {
+      if (text[idx] === '\n') { line++; col = 0; } else { col++; }
+    }
+    return CodeMirror.Pos(line, col);
+  }
+
+  const invocationSchema = JSON.parse(document.getElementById('invocation-schema').textContent);
+  const validateInvocation = new Ajv({ allErrors: true }).compile(invocationSchema);
+
+  const runButton = document.getElementById('run');
+  const status = document.getElementById('status');
+
+  let requestValid = true;
+  function setRequestValid(valid) {
+    requestValid = valid;
+    runButton.disabled = !valid;
+    runButton.title = valid ? '' : 'Fix the highlighted request errors before running.';
+  }
+
+  // getAnnotations implementation for CodeMirror's lint addon: underlines the exact JSON
+  // range for each schema violation, with the Ajv message shown on hover.
+  function lintInvocation(text) {
+    let parsed;
+    try {
+      parsed = parseJSONWithLocations(text);
+    } catch (err) {
+      setRequestValid(false);
+      const from = offsetToPos(text, err.at || 0);
+      const to = CodeMirror.Pos(from.line, from.ch + 1);
+      return [{ message: `Invalid JSON: ${err.message}`, severity: 'error', from, to }];
+    }
+
+    const valid = validateInvocation(parsed.value);
+    if (valid) {
+      setRequestValid(true);
+      return [];
+    }
+
+    setRequestValid(false);
+    return validateInvocation.errors.map((err) => {
+      const location = parsed.locations.get(err.instancePath) || parsed.locations.get('');
+      const from = location ? offsetToPos(text, location.start) : CodeMirror.Pos(0, 0);
+      const to = location ? offsetToPos(text, location.end) : CodeMirror.Pos(0, 1);
+      const path = err.instancePath ? err.instancePath.slice(1).replace(/\//g, '.') : '(root)';
+      return { message: `${path}: ${err.message}`, severity: 'error', from, to };
+    });
+  }
+
+  const codeEditor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+    mode: 'javascript', theme: 'eclipse', lineNumbers: true,
+  });
+  const requestEditor = CodeMirror.fromTextArea(document.getElementById('request-editor'), {
+    mode: { name: 'javascript', json: true }, theme: 'eclipse', lineNumbers: true,
+    gutters: ['CodeMirror-lint-markers'],
+    lint: { getAnnotations: lintInvocation, async: false },
+  });
+  const responseEditor = CodeMirror.fromTextArea(document.getElementById('response-editor'), {
+    mode: { name: 'javascript', json: true }, theme: 'eclipse', lineNumbers: true, readOnly: true,
+  });
+
+  const outputPanel = document.getElementById('output-panel');
+  const outputHeader = document.getElementById('output-header');
+  const outputMinimizeButton = document.getElementById('output-minimize');
+  const outputMaximizeButton = document.getElementById('output-maximize');
+  function setOutputExpanded(expanded) {
+    outputPanel.classList.toggle('expanded', expanded);
+    outputMinimizeButton.classList.toggle('active', !expanded);
+    outputMaximizeButton.classList.toggle('active', expanded);
+    responseEditor.refresh();
+  }
+  outputHeader.addEventListener('click', () => setOutputExpanded(!outputPanel.classList.contains('expanded')));
+  outputMinimizeButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    setOutputExpanded(false);
+  });
+  outputMaximizeButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    setOutputExpanded(true);
+  });
+
+  const presetSelect = document.getElementById('request-preset');
+  requestPresets.forEach((preset, index) => {
+    const option = document.createElement('option');
+    option.value = String(index);
+    option.textContent = preset.name;
+    presetSelect.appendChild(option);
+  });
+  const defaultPresetIndex = requestPresets.length - 1;
+  presetSelect.value = String(defaultPresetIndex);
+  requestEditor.setValue(JSON.stringify(requestPresets[defaultPresetIndex].value, null, 2));
+  presetSelect.addEventListener('change', () => {
+    const preset = requestPresets[Number(presetSelect.value)];
+    requestEditor.setValue(JSON.stringify(preset.value, null, 2));
+  });
+
+  const exampleSelect = document.getElementById('code-example');
+  codeExamples.forEach((example, index) => {
+    const option = document.createElement('option');
+    option.value = String(index);
+    option.textContent = example.name;
+    exampleSelect.appendChild(option);
+  });
+  exampleSelect.addEventListener('change', () => {
+    if (!exampleSelect.value) return;
+    codeEditor.setValue(codeExamples[Number(exampleSelect.value)].code);
+    exampleSelect.value = '';
+  });
+
+  runButton.addEventListener('click', async () => {
+    if (!requestValid) return;
+    runButton.disabled = true;
+    status.textContent = 'saving code…';
+
+    // Mock save: this scaffold does not persist code, it only simulates the step.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    status.textContent = 'thinking…';
+    try {
+      const response = await fetch('/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestEditor.getValue(),
+      });
+      const text = await response.text();
+      if (!response.ok) {
+        responseEditor.setValue(text);
+        status.textContent = 'error';
+        setOutputExpanded(true);
+        return;
+      }
+      responseEditor.setValue(JSON.stringify(JSON.parse(text), null, 2));
+      status.textContent = 'done';
+      setOutputExpanded(true);
+    } catch (err) {
+      responseEditor.setValue(String(err));
+      status.textContent = 'error';
+      setOutputExpanded(true);
+    } finally {
+      runButton.disabled = !requestValid;
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+{
+  "current": {
+    "version": "5.2.4",
+    "releaseDate": "2026-09-11",
+    "packages": [
+      {
+        "os": "darwin",
+        "arch": "amd64",
+        "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.2.4/edgeworkers-devserver-darwin-amd64",
+        "sha256": "5a3e80fb9c1392aa76c3567979aa8434a2e8c45e5cf4294d8371ceb2cd37ade0"
+      },
+      {
+        "os": "darwin",
+        "arch": "arm64",
+        "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.2.4/edgeworkers-devserver-darwin-arm64",
+        "sha256": "cc7b668a891172d1c7cc8fa61a666141b5e24af7485333f4deef5247ec3d1af8"
+      },
+      {
+        "os": "linux",
+        "arch": "amd64",
+        "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.2.4/edgeworkers-devserver-linux-amd64",
+        "sha256": "41cd2b78e31c2aa306356681e6dcf26457e5da6411fb2054c9c221ab5c47d528"
+      },
+      {
+        "os": "linux",
+        "arch": "arm64",
+        "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.2.4/edgeworkers-devserver-linux-arm64",
+        "sha256": "e4a2eef0e8a7057e1c41905a367724b1927dfd83493cfd29c093faaa6c251178"
+      },
+      {
+        "os": "windows",
+        "arch": "amd64",
+        "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.2.4/edgeworkers-devserver-windows-amd64.exe",
+        "sha256": "208e5291a16d45fbaaa7223f8c5e8cb6828cc1ee4d630619cf10ab72b72d4601"
+      },
+      {
+        "os": "windows",
+        "arch": "arm64",
+        "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.2.4/edgeworkers-devserver-windows-arm64.exe",
+        "sha256": "56d05edbe499c102353081d25a01a9e1b7a6cbc45ec10c2679063c0f90f55610"
+      }
+    ]
+  },
+  "previous": [
+    {
+      "version": "5.1.4",
+      "releaseDate": "2026-09-11",
+      "packages": [
+        {
+          "os": "darwin",
+          "arch": "amd64",
+          "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.1.4/edgeworkers-devserver-darwin-amd64",
+          "sha256": "5c406e3719dec5baf6f1ed46383201200a35fd86f3d7666e504e10d02492eaed"
+        },
+        {
+          "os": "darwin",
+          "arch": "arm64",
+          "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.1.4/edgeworkers-devserver-darwin-arm64",
+          "sha256": "ea0daa4fc643c5c0a824dca46e35a389ad2967a3e4fcea94c727beaa211703a3"
+        },
+        {
+          "os": "linux",
+          "arch": "amd64",
+          "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.1.4/edgeworkers-devserver-linux-amd64",
+          "sha256": "059b6bdfa9ba26db42d8dec20fc20aeed41f03e24cb3b1bc137988ab654f25ac"
+        },
+        {
+          "os": "linux",
+          "arch": "arm64",
+          "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.1.4/edgeworkers-devserver-linux-arm64",
+          "sha256": "8c46b5ce4a85632f99f92c190a2d5535da4a0bfbdc7c8aca00896586b7588125"
+        },
+        {
+          "os": "windows",
+          "arch": "amd64",
+          "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.1.4/edgeworkers-devserver-windows-amd64.exe",
+          "sha256": "3663ce3a9345a2e627c4ec988db986b30e85f894ac564cd5203084ac3204562b"
+        },
+        {
+          "os": "windows",
+          "arch": "arm64",
+          "url": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/devserver-5.1.4/edgeworkers-devserver-windows-arm64.exe",
+          "sha256": "c4e54c1d62ac551c536e3a82ad983587cdd3d8f14b5ed27a1abef51abf00f25b"
+        }
+      ]
+    }
+  ]
+}

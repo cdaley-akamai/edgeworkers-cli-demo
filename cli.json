@@ -1,0 +1,22 @@
+{
+  "name": "akamai/edgeworkers",
+  "requirements": {
+    "go": "1.26.0"
+  },
+  "commands": [
+    {
+      "name": "edgeworkers",
+      "version": "2.0.0",
+      "aliases": ["ew", "edgeworkers"],
+      "description": "Manage Akamai EdgeWorkers.",
+      "bin": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/edgeworkers-{{.Version}}/akamai-{{.Name}}-{{.OS}}-{{.Arch}}{{.BinSuffix}}"
+    },
+    {
+      "name": "edgekv",
+      "version": "2.0.0",
+      "aliases": ["ekv", "edgekv"],
+      "description": "Manage Akamai EdgeKV.",
+      "bin": "https://github.com/cdaley-akamai/edgeworkers-cli-demo/releases/download/edgekv-{{.Version}}/akamai-{{.Name}}-{{.OS}}-{{.Arch}}{{.BinSuffix}}"
+    }
+  ]
+}
